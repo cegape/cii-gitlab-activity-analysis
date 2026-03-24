@@ -1,0 +1,78 @@
+# =========================
+# PYTHON
+# =========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# =========================
+# IDE / EDITORS
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS FILES
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# LOGS
+# =========================
+
+*.log
+
+# =========================
+# JUPYTER
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# ENV VARIABLES / SECRETS
+# =========================
+
+.env
+.env.*
+*.env
+
+# =========================
+# GENERATED DATA FILES
+# =========================
+
+# Excel outputs
+*.xlsx
+
+# Optional CSV exports
+*.csv
+
+# Optional temp files
+*.tmp
+
+# =========================
+# PROJECT-SPECIFIC
+# =========================
+
+# If you ever dump raw API data
+data/
+exports/
+
+# Ignore local test scripts if needed
+test_*.py
