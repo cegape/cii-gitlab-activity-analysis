@@ -5,18 +5,47 @@ et un classement, ventilé par axe CII et immobilisation.
 Usage: python3 participation.py
 Source: gitlab_classified.xlsx (produit par classify.py)
 """
+import os
 import pandas as pd
+from dotenv import load_dotenv
 from constants import CII_CODES, IMMO_CODES, PROJECT_CODES, MONTHS
+
+load_dotenv()
 
 SOURCE_FILE = "gitlab_classified.xlsx"
 OUTPUT_FILE = "participation.xlsx"
+
+
+def get_ordered_users(events: pd.DataFrame) -> list[str]:
+    """Retourne les users dans l'ordre du .env."""
+    env_usernames = os.getenv("GITLAB_USERNAMES", "").split(",")
+    env_usernames = [u.strip().lower() for u in env_usernames if u.strip()]
+
+    key_to_name = (
+        events[["person_key", "display_name"]]
+        .drop_duplicates("person_key")
+        .set_index("person_key")["display_name"]
+        .to_dict()
+    )
+
+    ordered = []
+    for username in env_usernames:
+        display = key_to_name.get(username)
+        if display and display not in ordered:
+            ordered.append(display)
+
+    for name in sorted(events["display_name"].dropna().unique()):
+        if name not in ordered:
+            ordered.append(name)
+
+    return ordered
 
 
 def main():
     events = pd.read_excel(SOURCE_FILE, sheet_name="events")
     events["event_date"] = pd.to_datetime(events["event_date"], errors="coerce")
 
-    users = sorted(events["display_name"].dropna().unique())
+    users = get_ordered_users(events)
     reverse_month = {v: k for k, v in MONTHS}
 
     rows = []

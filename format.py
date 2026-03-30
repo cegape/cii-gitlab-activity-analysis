@@ -1,6 +1,8 @@
+import os
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+from dotenv import load_dotenv
 from constants import (
     CII_CODES, NON_CII_CODES, ALL_CODES,
     IMMO_CODES, CHARGES_CODES, ALL_COMPTABLE_CODES, COMPTABLE_DETAILS,
@@ -9,8 +11,37 @@ from constants import (
     DISPLAY_COLUMNS, COMPTABLE_DISPLAY,
 )
 
+load_dotenv()
+
 SOURCE_FILE = "gitlab_classified.xlsx"
 OUTPUT_FILE = "tableaux_CII_mensuels_realistes.xlsx"
+
+
+def get_ordered_users(daily: pd.DataFrame) -> list[str]:
+    """Retourne les users dans l'ordre du .env, mappés vers leur display_name."""
+    env_usernames = os.getenv("GITLAB_USERNAMES", "").split(",")
+    env_usernames = [u.strip().lower() for u in env_usernames if u.strip()]
+
+    # Mapping person_key → display_name depuis le daily
+    key_to_name = (
+        daily[["person_key", "username"]]
+        .drop_duplicates("person_key")
+        .set_index("person_key")["username"]
+        .to_dict()
+    )
+
+    ordered = []
+    for username in env_usernames:
+        display = key_to_name.get(username)
+        if display and display not in ordered:
+            ordered.append(display)
+
+    # Ajouter les éventuels users non présents dans le .env
+    for name in sorted(daily["username"].dropna().unique()):
+        if name not in ordered:
+            ordered.append(name)
+
+    return ordered
 
 
 def load_events() -> pd.DataFrame:
@@ -160,7 +191,7 @@ def apply_annual_formulas(path: str, sheet_name: str, users: list[str], columns:
 def main():
     events = load_events()
     daily = build_daily_allocations(events)
-    users = sorted(daily["username"].dropna().unique().tolist())
+    users = get_ordered_users(daily)
 
     legend_df = build_legend_sheet()
     resources_df = build_resources_sheet(daily, users)
