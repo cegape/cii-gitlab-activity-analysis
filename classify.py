@@ -80,9 +80,8 @@ def classify_cii(title: str, description: str = "", changed_files: str = "") -> 
     t = normalize_text(title) + " " + normalize_text(description)
     files = normalize_text(changed_files)
 
-    # Exclure d'abord les merge commits
-    if t.startswith("merge branch") or t.startswith("merge remote"):
-        return "AUTRE"
+    # Pour les merge commits, utiliser la description (contient souvent le vrai titre de la MR)
+    is_merge = normalize_text(title).startswith("merge branch") or normalize_text(title).startswith("merge remote")
 
     # ARCHITECTURE — archi hexagonale, modularisation, refonte structurante
     if any(k in t for k in ["hexagonal", "modulaire", "modularisation"]):
@@ -164,6 +163,27 @@ def classify_cii(title: str, description: str = "", changed_files: str = "") -> 
                              "edition", "affichage", "ecran", "modal", "bouton",
                              "api", "endpoint", "service", "import", "export"]):
         return "FONCTIONNEL"
+
+    # --- Classification par fichiers modifiés pour les événements non classés ---
+    if files:
+        # Tests
+        if any(k in files for k in ["/test/", "test.groovy", "test.java", "spec.groovy",
+                                      "steps.groovy", "steps.java", "/functional-tests/"]):
+            return "TESTS"
+        # Infra
+        if any(k in files for k in ["dockerfile", "docker-compose", ".gitlab-ci",
+                                      "kubernetes", "k8s", "helm"]):
+            return "INFRA"
+        # Si des fichiers source sont modifiés, c'est du fonctionnel
+        if any(k in files for k in [".groovy", ".java", ".gsp", ".jsx", ".vue", ".ts"]):
+            return "FONCTIONNEL"
+        # Config, SQL, scripts
+        if any(k in files for k in [".sql", ".yml", ".yaml", ".xml", ".properties", ".json"]):
+            return "FONCTIONNEL"
+
+    # Merge commits sans signal → AUTRE
+    if is_merge:
+        return "AUTRE"
 
     return "AUTRE"
 
