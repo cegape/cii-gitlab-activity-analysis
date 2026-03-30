@@ -94,25 +94,29 @@ def classify_cii(title: str, description: str = "", changed_files: str = "") -> 
         return "ARCHITECTURE"
 
     # MONTEE DE STACK — montée de version technologique clairement identifiable
-    if any(k in t for k in ["montee de version", "montée de version", "upgrade stack"]):
+    # Uniquement dans le titre (pas description) pour éviter les faux positifs
+    tt = normalize_text(title)
+    if any(k in tt for k in ["montee de version", "montée de version", "upgrade stack"]):
         return "MONTEE DE STACK"
-    if "grails" in t and any(k in t for k in ["montee", "montée", "version", "migration"]):
+    if "grails" in tt and any(k in tt for k in ["montee", "montée", "version", "migration"]):
         return "MONTEE DE STACK"
-    if any(k in t for k in ["java 21", "java 17", "jdk 21", "jdk 17"]):
+    if any(k in tt for k in ["java 21", "java 17", "jdk 21", "jdk 17"]):
         return "MONTEE DE STACK"
-    if "spring boot" in t and any(k in t for k in ["migr", "introduction", "poc"]):
+    if "spring boot" in tt and any(k in tt for k in ["migr", "introduction", "poc"]):
         return "MONTEE DE STACK"
-    if "stack tech" in t and not any(k in t for k in ["fix", "correction", "bug"]):
+    if "stack tech" in tt and not any(k in tt for k in ["fix", "correction", "bug"]):
         return "MONTEE DE STACK"
-    # Signal par fichiers : build/dépendances
-    if any(k in files for k in ["build.gradle", "pom.xml"]) and any(k in t for k in ["version", "upgrade", "montee", "montée", "migration"]):
+    if "migration" in tt and any(k in tt for k in ["spring", "swagger", "security", "nexus"]):
         return "MONTEE DE STACK"
 
     # OPTIMISATION — travaux de performance clairement identifiables
+    # "optimisation" seul suffit, mais "optimi" doit être qualifié pour éviter "optimisation imports"
     if any(k in t for k in ["optimisation", "optimization"]):
-        return "OPTIMISATION"
-    if "optimi" in t:
-        return "OPTIMISATION"
+        # Exclure "optimisation imports" (imports Java, pas perf)
+        if "import" in t and not any(k in t for k in ["perf", "volum", "cache", "massif", "lenteur"]):
+            pass  # pas CII
+        else:
+            return "OPTIMISATION"
     if "perf" in t and any(k in t for k in ["lenteur", "amelior", "amélio"]):
         return "OPTIMISATION"
     if "cache" in t and any(k in t for k in ["optimis", "perf", "amelior"]):
