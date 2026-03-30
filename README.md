@@ -1,45 +1,109 @@
 # CII GitLab Activity Analysis
 
-Reconstruction of developer activity from GitLab data for **CII (Crédit Impôt Innovation)** reporting.
+Reconstruction de l'activité développeur à partir de GitLab pour le reporting **CII (Crédit Impôt Innovation)** et l'**immobilisation des coûts de développement**.
 
-## 🧩 Pipeline
+## Pipeline
 
-GitLab API → activity-extract.py → gitlab_all_users_2025.xlsx → format5.py → Excel outputs
+```
+GitLab API → activity-extract-enhanced.py → classify.py → (revue manuelle) → format.py
+                                                                             → participation.py
+```
 
-## ⚙️ Step 1 — Extraction
+## Configuration
 
-Configure in activity-extract.py:
-- GitLab token
-- users
-- year
+Créer un fichier `.env` :
 
-Run:
-python3 activity-extract.py
+```
+GITLAB_URL=https://gitlab.com/api/v4     # optionnel
+GITLAB_TOKEN=glpat-xxx
+GITLAB_USERNAMES=user1,user2,user3
+YEAR=2025                                 # optionnel
+```
 
-Output:
-gitlab_all_users_2025.xlsx
+## Étape 1 — Extraction
 
-## ⚙️ Step 2 — Transformation
+Extrait les MR, commits et fichiers modifiés de chaque utilisateur depuis GitLab.
 
-Run:
-python3 format5.py
+```
+python3 activity-extract-enhanced.py
+```
 
-Output:
-tableaux_CII_mensuels_realistes.xlsx
+- Output : `gitlab_all_users_2025_enriched.xlsx`
+- Colonnes : titre, description, fichiers modifiés, stats (additions/deletions), projet GitLab
+- Cache : `.changed_files_cache.json` — reprend automatiquement en cas d'interruption
+- Rate limit : respecte la limite GitLab de 2000 req/min avec marge de sécurité
 
-## 📊 Output
+Pour ajouter un utilisateur sans refaire toute l'extraction :
 
-- Annuel
-- Légende
-- Ressources
-- Monthly sheets
+```
+python3 add-user-extract.py <username>
+```
 
-## 🧠 Methodology
+## Étape 2 — Classification
 
-- Based on real GitLab activity
-- Inactive months excluded
-- Normalization: 218 × (active months / 12)
+Double classification de chaque événement :
+- **Axe CII** : éligible innovation ou hors CII
+- **Axe comptable** : immobilisable ou charges
 
-## ⚠️ Disclaimer
+```
+python3 classify.py
+```
 
-For CII support only. Must be reviewed with accounting/HR data.
+- Output : `gitlab_classified.xlsx` (onglets "events" + "légende")
+- Classification basée sur : titre, description, fichiers modifiés, projet GitLab
+- Colonnes éditables manuellement : `cii_code`, `comptable`, `project`, `weight`
+
+### Codes CII (éligibles)
+
+| Code | Description |
+|---|---|
+| ARCHITECTURE | Architecture hexagonale, modularisation, refonte de socle |
+| MONTEE DE STACK | Montée de version Java/Grails/Spring Boot, migration frameworks |
+| OPTIMISATION | Performance, cache, volumétrie |
+| MULTI-TENANT | Passage SaaS multi-tenant |
+| CONVERGENCE GALPE INDELINE | Convergence Galpe vers Indeline, flux CNRS |
+
+### Codes hors CII
+
+MAINTENANCE, FONCTIONNEL, TESTS, INFRA, AUTRE
+
+### Catégories comptables
+
+| Catégorie | Immobilisable ? |
+|---|---|
+| DEVELOPPEMENT | Oui |
+| MAINTENANCE EVOLUTIVE | Oui |
+| MAINTENANCE CORRECTIVE | Non (charges) |
+| EXPLOITATION | Non (charges) |
+| SUPPORT | Non (charges) |
+
+## Étape 3 — Tableaux de sortie
+
+```
+python3 format.py
+```
+
+- Output : `tableaux_CII_mensuels_realistes.xlsx`
+- Onglets : Annuel CII, Annuel IMMO, Légende, Ressources, Détail journalier, 12 feuilles CII mensuelles, 12 feuilles IMMO mensuelles
+
+## Participation
+
+Classement des développeurs par indice de participation, ventilé CII et immobilisation.
+
+```
+python3 participation.py
+```
+
+- Output : `participation.xlsx`
+
+## Méthodologie
+
+- Basé sur l'activité GitLab réelle (commits + merge requests)
+- Mois inactifs exclus
+- Plafond de 1,0 jour par personne et par date
+- Normalisation : 218 jours ouvrés × (mois actifs / 12)
+- Approche conservatrice : seules les activités clairement identifiables sont classées CII
+
+## Avertissement
+
+Outil d'aide au reporting CII et à l'immobilisation. Les données doivent être croisées avec la comptabilité et les RH avant déclaration.

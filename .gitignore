@@ -11,6 +11,7 @@ venv/
 .env/
 .venv/
 env/
+.env
 
 # Distribution / packaging
 build/
@@ -76,3 +77,6 @@ exports/
 
 # Ignore local test scripts if needed
 test_*.py
+
+# Cache API
+.changed_files_cache.json
