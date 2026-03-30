@@ -5,13 +5,12 @@ from constants import (
     CII_CODES, NON_CII_CODES, ALL_CODES,
     IMMO_CODES, CHARGES_CODES, ALL_COMPTABLE_CODES, COMPTABLE_DETAILS,
     PROJECT_CODES, MONTHS,
-    CII_DETAILS, NON_CII_DETAILS, PROJECT_DETAILS, DISPLAY_COLUMNS,
+    CII_DETAILS, NON_CII_DETAILS, PROJECT_DETAILS,
+    DISPLAY_COLUMNS, COMPTABLE_DISPLAY,
 )
 
 SOURCE_FILE = "gitlab_classified.xlsx"
 OUTPUT_FILE = "tableaux_CII_mensuels_realistes.xlsx"
-
-COMPTABLE_DISPLAY = ALL_COMPTABLE_CODES + PROJECT_CODES + ["TOTAL"]
 
 
 def load_events() -> pd.DataFrame:
@@ -76,7 +75,11 @@ def build_daily_allocations(events: pd.DataFrame) -> pd.DataFrame:
             "TOTAL": round(day_value, 6),
         }
         row.update(code_amounts)
+        row["TOTAL CII"] = sum(code_amounts.get(c, 0) for c in CII_CODES)
+        row["TOTAL HORS CII"] = sum(code_amounts.get(c, 0) for c in NON_CII_CODES)
         row.update(comptable_amounts)
+        row["TOTAL IMMO"] = sum(comptable_amounts.get(c, 0) for c in IMMO_CODES)
+        row["TOTAL CHARGES"] = sum(comptable_amounts.get(c, 0) for c in CHARGES_CODES)
         row.update(proj_amounts)
         rows.append(row)
 
