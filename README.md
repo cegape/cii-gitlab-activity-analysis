@@ -98,11 +98,23 @@ python3 participation.py
 
 ## Méthodologie
 
-- Basé sur l'activité GitLab réelle (commits + merge requests)
+### Calcul du temps passé
+
+Le calcul repose sur l'activité GitLab réelle (commits + merge requests) :
+
+1. **1 jour d'activité = 1 jour.** Si un développeur a au moins un événement GitLab sur une date, cette date compte pour 1 jour travaillé.
+
+2. **Ventilation par catégorie au prorata.** Si un développeur a N événements dans la journée, chaque événement reçoit 1/N de la journée. Les fractions sont ensuite sommées par catégorie (CII, hors CII, comptable, projet).
+
+   Exemple : un développeur a 4 événements le 15 janvier (1 ARCHITECTURE, 1 OPTIMISATION, 2 FONCTIONNEL). La journée de 1.0 jour est répartie : ARCHITECTURE = 0.25, OPTIMISATION = 0.25, FONCTIONNEL = 0.50.
+
+3. **Plafond de 1,0 jour par personne et par date.** Quel que soit le nombre d'événements, une journée ne peut pas dépasser 1 jour.
+
+### Principes
+
 - Mois inactifs exclus
-- Plafond de 1,0 jour par personne et par date
-- Normalisation : 218 jours ouvrés × (mois actifs / 12)
 - Approche conservatrice : seules les activités clairement identifiables sont classées CII
+- Classification basée sur le titre, la description, les fichiers modifiés et le projet GitLab
 
 ## Avertissement
 
