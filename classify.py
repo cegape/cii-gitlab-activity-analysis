@@ -42,17 +42,8 @@ def normalize_person_key(username: str, author_name: str) -> str:
 
 
 def complexity_weight(total_changes: float = 0) -> float:
-    """Poids basé uniquement sur le volume de changements (lignes modifiées)."""
-    if total_changes <= 0:
-        return 0.1
-    if total_changes <= 10:
-        return 0.2
-    if total_changes <= 50:
-        return 0.4
-    if total_changes <= 200:
-        return 0.6
-    if total_changes <= 500:
-        return 0.8
+    """Poids uniforme : chaque événement pèse 1. La journée vaut 1 jour,
+    réparti au prorata du nombre d'événements."""
     return 1.0
 
 
