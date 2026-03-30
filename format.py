@@ -165,7 +165,32 @@ def main():
     legend_df = build_legend_sheet()
     resources_df = build_resources_sheet(daily, users)
 
+    # Synthèse par personne
+    synth_rows = []
+    for user in users:
+        g = daily[daily["username"] == user]
+        if g.empty:
+            continue
+        total = round(g["TOTAL"].sum(), 1)
+        total_cii = round(g["TOTAL CII"].sum(), 1)
+        total_immo = round(g["TOTAL IMMO"].sum(), 1)
+        synth_rows.append({
+            "Nom": user,
+            "Total CII": total_cii,
+            "Total hors CII": round(total - total_cii, 1),
+            "Total immobilisable": total_immo,
+            "Total charges": round(total - total_immo, 1),
+            "Total général": total,
+        })
+    synth_df = pd.DataFrame(synth_rows)
+    # Ligne TOTAL
+    synth_total = {col: synth_df[col].sum() if synth_df[col].dtype == float else "" for col in synth_df.columns}
+    synth_total["Nom"] = "TOTAL"
+    synth_df = pd.concat([synth_df, pd.DataFrame([synth_total])], ignore_index=True)
+
     with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl") as writer:
+        synth_df.to_excel(writer, sheet_name="Synthèse", index=False)
+
         # Annuels
         pd.DataFrame(index=users + ["TOTAL"], columns=DISPLAY_COLUMNS).to_excel(
             writer, sheet_name="Annuel CII")
