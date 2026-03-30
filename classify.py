@@ -41,35 +41,19 @@ def normalize_person_key(username: str, author_name: str) -> str:
     return username or author_name
 
 
-def complexity_weight(title: str, event_type: str, total_changes: float = 0) -> float:
-    t = normalize_text(title)
-    weight = 0.20 if event_type == "commit" else 0.45
-
-    complex_terms = {
-        "arch": 0.35, "architecture": 0.35, "hexagonal": 0.35,
-        "refonte": 0.25, "socle": 0.25, "modulaire": 0.25,
-        "java": 0.20, "jdk": 0.20, "jvm": 0.20, "grails": 0.20, "spring boot": 0.25,
-        "multi-tenant": 0.30, "multitenant": 0.30, "tenant": 0.25, "saas": 0.20,
-        "galpe": 0.20, "convergence": 0.20,
-        "optimi": 0.20, "perf": 0.20, "cache": 0.15, "volum": 0.15,
-    }
-
-    for term, bonus in complex_terms.items():
-        if term in t:
-            weight += bonus
-
-    weight += min(len(t) / 120.0, 0.15)
-
-    # Bonus basé sur le volume de changements (commits uniquement)
-    if event_type == "commit" and total_changes > 0:
-        if total_changes > 500:
-            weight += 0.20
-        elif total_changes > 200:
-            weight += 0.15
-        elif total_changes > 100:
-            weight += 0.10
-
-    return min(weight, 1.0)
+def complexity_weight(total_changes: float = 0) -> float:
+    """Poids basé uniquement sur le volume de changements (lignes modifiées)."""
+    if total_changes <= 0:
+        return 0.1
+    if total_changes <= 10:
+        return 0.2
+    if total_changes <= 50:
+        return 0.4
+    if total_changes <= 200:
+        return 0.6
+    if total_changes <= 500:
+        return 0.8
+    return 1.0
 
 
 # =========================
@@ -302,10 +286,7 @@ def load_events() -> pd.DataFrame:
         classify_project(t, d, p, f)
         for t, d, p, f in zip(events["title"], events["description"], events["project_name"], events["changed_files"])
     ]
-    events["weight"] = [
-        complexity_weight(t, et, tc)
-        for t, et, tc in zip(events["title"], events["event_type"], events["total_changes"])
-    ]
+    events["weight"] = events["total_changes"].apply(complexity_weight)
     events["comptable"] = [
         classify_comptable(c, t, d)
         for c, t, d in zip(events["cii_code"], events["title"], events["description"])
