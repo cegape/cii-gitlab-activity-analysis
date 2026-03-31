@@ -247,6 +247,29 @@ def get_commit_changed_files(project_id, commit_sha):
     cache_save_periodic()
     return result
 
+def get_mr_comments(project_id, mr_iid):
+    """Récupère les commentaires (notes) d'une MR, retourne une liste de {author, body}."""
+    cache_key = f"comments:{project_id}:{mr_iid}"
+    if cache_key in file_cache:
+        return file_cache[cache_key]
+
+    url = f"{GITLAB_URL}/projects/{project_id}/merge_requests/{mr_iid}/notes"
+    notes = get_paginated(url, {"sort": "asc"})
+
+    # Ne garder que les commentaires humains (pas les notes système)
+    comments = []
+    for n in notes:
+        if n.get("system", False):
+            continue
+        comments.append({
+            "author": (n.get("author") or {}).get("name", ""),
+            "body": (n.get("body") or "")[:500],
+        })
+
+    file_cache[cache_key] = comments
+    cache_save_periodic()
+    return comments
+
 # =========================
 # MERGE REQUESTS
 # =========================
@@ -294,6 +317,11 @@ def normalize_merge_requests(mrs, username):
         # Récupérer les fichiers modifiés
         changed_files = get_mr_changed_files(project_id, mr_iid) if project_id and mr_iid else ""
 
+        # Récupérer les commentaires
+        comments = get_mr_comments(project_id, mr_iid) if project_id and mr_iid else []
+        nb_comments = len(comments)
+        commenters = ",".join(sorted(set(c["author"] for c in comments if c["author"])))
+
         rows.append({
             "username": username,
             "mr_id": mr.get("id"),
@@ -310,12 +338,15 @@ def normalize_merge_requests(mrs, username):
             "author_name": (mr.get("author") or {}).get("name"),
             "assignee": (mr.get("assignee") or {}).get("name") if mr.get("assignee") else None,
             "reviewers": ",".join([r.get("name") for r in mr.get("reviewers", [])]),
+            "nb_comments": nb_comments,
+            "commenters": commenters,
             "changed_files": changed_files,
             "web_url": mr.get("web_url"),
         })
 
         if (i + 1) % 50 == 0:
-            print(f"    MR fichiers: {i + 1}/{len(mrs)}")
+            cached = sum(1 for k in file_cache if k.startswith("mr:") or k.startswith("comments:"))
+            print(f"    MR: {i + 1}/{len(mrs)} (cache: {len(file_cache)} entrées)")
 
     df = pd.DataFrame(rows)
 
@@ -404,8 +435,9 @@ def main():
     all_mr = []
     all_commits = []
 
-    for username in USERNAMES:
-        print(f"\n👤 Traitement: {username}")
+    total_users = len(USERNAMES)
+    for idx, username in enumerate(USERNAMES, 1):
+        print(f"\n[{idx}/{total_users}] 👤 Traitement: {username}")
 
         user_id = get_user_id(username)
         if not user_id:
